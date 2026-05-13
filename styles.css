@@ -1,0 +1,278 @@
+/* CNP Seguradora — tokens from brand guide */
+:root {
+  /* Identitárias nível 1 */
+  --cnp-navy: #002364;
+  --cnp-navy-dark: #001845;
+  --cnp-navy-darker: #000D26;
+  --cnp-navy-light: #334F83;
+  --cnp-navy-lighter: #667BA2;
+
+  --cnp-pink: #D70064;
+  --cnp-pink-dark: #A3004C;
+  --cnp-pink-darker: #7A0039;
+  --cnp-pink-light: #DF3383;
+  --cnp-pink-lighter: #E766A2;
+
+  /* Identitárias nível 2 */
+  --cnp-sky: #39A8E5;
+  --cnp-teal: #00B4AA;
+
+  /* Suporte */
+  --cnp-green: #48832B;
+  --cnp-blue: #3E77B0;
+  --cnp-orange: #E65A00;
+  --cnp-violet: #5D2F88;
+
+  /* Neutras */
+  --cnp-gray-50: #F4F3F3;
+  --cnp-gray-100: #E3E0E2;
+  --cnp-gray-200: #C6C2C5;
+  --cnp-gray-300: #A5B3B7;
+  --cnp-gray-500: #7F9398;
+  --cnp-gray-700: #454E4F;
+  --cnp-gray-900: #282E2E;
+  --cnp-white: #FFFFFF;
+
+  /* Gradientes oficiais */
+  --grad-navy: linear-gradient(230.8deg, #5D2F88 19.27%, #002364 100%);
+  --grad-pink: linear-gradient(219.26deg, #FF298C 0%, #D70064 76.43%);
+  --grad-teal: linear-gradient(224.34deg, #66D2CC -50.46%, #0084AA 62.35%);
+  --grad-light: linear-gradient(180.01deg, #F4F3F3 0.01%, #FFFFFF 99.99%);
+
+  /* Tipografia */
+  --font-sans: 'Raleway', 'Arial', system-ui, sans-serif;
+
+  /* Spacing — squish-md do guia (24px lateral / 8px vertical) */
+  --space-squish-sm: 4px 16px;
+  --space-squish-md: 8px 24px;
+  --space-squish-lg: 12px 32px;
+
+  /* Fio de Ariadne */
+  --ariadne-w: 1.5px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  color: var(--cnp-gray-900);
+  background: var(--cnp-gray-50);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'ss01', 'ss02';
+}
+
+button { font-family: inherit; cursor: pointer; }
+
+/* Caixa de título — quadrado azul/rosa do guia */
+.cnp-titlebox {
+  display: inline-block;
+  background: var(--cnp-navy);
+  color: var(--cnp-white);
+  padding: var(--space-squish-md);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.cnp-titlebox--pink { background: var(--cnp-pink); }
+.cnp-titlebox--white { background: var(--cnp-white); color: var(--cnp-navy); }
+
+/* Fio de Ariadne — utilitários */
+.ariadne {
+  stroke: var(--cnp-navy);
+  fill: none;
+  stroke-width: var(--ariadne-w);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ariadne--pink { stroke: var(--cnp-pink); }
+.ariadne--white { stroke: var(--cnp-white); }
+
+/* Botões */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  border: none;
+  border-radius: 999px;
+  transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
+  text-decoration: none;
+}
+.btn-primary {
+  background: var(--cnp-navy);
+  color: var(--cnp-white);
+}
+.btn-primary:hover { background: var(--cnp-navy-dark); transform: translateY(-1px); box-shadow: 0 6px 18px -8px rgba(0,35,100,.6); }
+.btn-primary:disabled { background: var(--cnp-gray-300); cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-pink { background: var(--cnp-pink); color: var(--cnp-white); }
+.btn-pink:hover { background: var(--cnp-pink-dark); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--cnp-navy);
+  border: 1.5px solid var(--cnp-navy);
+}
+.btn-ghost:hover { background: var(--cnp-navy); color: var(--cnp-white); }
+
+.btn-text {
+  background: transparent;
+  color: var(--cnp-navy);
+  padding: 8px 12px;
+}
+.btn-text:hover { color: var(--cnp-pink); }
+
+/* Card */
+.card {
+  background: var(--cnp-white);
+  border: 1px solid var(--cnp-gray-100);
+  border-radius: 4px;
+}
+
+/* Status pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pill-processing { background: rgba(57, 168, 229, 0.12); color: #0a5d8a; }
+.pill-done       { background: rgba(0, 180, 170, 0.15); color: #00615B; }
+.pill-error      { background: rgba(215, 0, 100, 0.12); color: #A3004C; }
+.pill-queued     { background: var(--cnp-gray-100); color: var(--cnp-gray-700); }
+
+/* Dropzone */
+.dropzone {
+  position: relative;
+  border: 1.5px dashed var(--cnp-gray-300);
+  background: var(--cnp-white);
+  border-radius: 4px;
+  padding: 40px 24px;
+  transition: all .2s ease;
+  text-align: center;
+}
+.dropzone--active {
+  border-color: var(--cnp-navy);
+  border-style: solid;
+  background: rgba(0, 35, 100, 0.03);
+}
+.dropzone--filled {
+  border-color: var(--cnp-navy);
+  border-style: solid;
+  background: var(--cnp-white);
+  text-align: left;
+  padding: 20px;
+}
+.dropzone--error {
+  border-color: var(--cnp-pink);
+  background: rgba(215, 0, 100, 0.03);
+}
+
+/* Inputs */
+.input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--cnp-gray-200);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  background: var(--cnp-white);
+  transition: border-color .15s ease;
+}
+.input:focus { outline: none; border-color: var(--cnp-navy); }
+
+/* Tab nav */
+.tab {
+  position: relative;
+  padding: 16px 4px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--cnp-gray-500);
+  background: none;
+  border: none;
+  letter-spacing: 0.02em;
+}
+.tab.active { color: var(--cnp-navy); }
+.tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--cnp-pink);
+}
+
+/* Header */
+.app-header {
+  background: var(--cnp-white);
+  border-bottom: 1px solid var(--cnp-gray-100);
+}
+
+/* Marca CNP — reproduzido conforme construção modular do guia */
+.cnp-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+.cnp-logo svg { display: block; }
+.cnp-logo .word {
+  font-family: 'Raleway', sans-serif;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--cnp-navy);
+  text-transform: uppercase;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* Skeleton */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--cnp-gray-100) 0%, #ECEAEB 50%, var(--cnp-gray-100) 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 4px;
+}
+
+/* Toast */
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Progress bar */
+.progress-track {
+  height: 6px;
+  background: var(--cnp-gray-100);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--grad-pink);
+  border-radius: 999px;
+  transition: width .4s ease;
+}
+.progress-fill--navy { background: var(--cnp-navy); }
+.progress-fill--teal { background: var(--grad-teal); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--cnp-gray-200); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cnp-gray-300); }

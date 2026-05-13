@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CNP — Refaturamento Funeral</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"/>
+
+<style>
+  @media print {
+    @page { size: A4 portrait; margin: 12mm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: white !important; }
+    .app-header { border-bottom: 1.5px solid #002364 !important; }
+    /* esconde elementos que só fazem sentido em tela */
+    .twk-fab, .twk-panel, .toast, [class*="Toast"],
+    button.tab:not(.active), nav { /* mantém ativa para contexto */ }
+    /* evita quebras dentro de cards */
+    .card, .dropzone { break-inside: avoid; }
+    /* desliga animações */
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    /* botões/inputs preservam aparência */
+    .btn-primary { background: #002364 !important; color: white !important; }
+    .cnp-titlebox { background: #002364 !important; color: white !important; }
+    .cnp-titlebox--pink { background: #D70064 !important; }
+    /* esconde elementos fixos posicionados no rodapé */
+    svg[style*="position: fixed"] { display: none !important; }
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="logo.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="upload-view.jsx"></script>
+<script type="text/babel" src="tracking-view.jsx"></script>
+<script type="text/babel" src="history-view.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "layout": "split",
+  "heroStyle": "gradient",
+  "accent": "navy",
+  "showAriadne": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [view, setView] = React.useState('upload'); // upload | tracking | history
+  const [submission, setSubmission] = React.useState(null);
+  const [history, setHistory] = React.useState([]);
+  const [toast, setToast] = React.useState(null);
+
+  const showToast = (msg, kind = 'success') => {
+    setToast({ msg, kind });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // Simula o pipeline n8n: avança por estágios automaticamente
+  const startProcessing = ({ excel, zip }) => {
+    const sub = {
+      id: 'sub-' + Date.now(),
+      protocol: 'RFT-2026-' + String(Math.floor(4833 + Math.random()*10)).padStart(5, '0'),
+      stage: 'upload',
+      startedAt: Date.now(),
+      excelName: excel.name,
+      excelSize: excel.size,
+      zipName: zip.name,
+      zipSize: zip.size,
+      casesCount: Math.floor(20 + Math.random() * 70),
+    };
+    setSubmission(sub);
+    setView('tracking');
+    showToast('Arquivos enviados com sucesso. Iniciando processamento.');
+
+    // Avança estágios
+    const order = ['extracting', 'analyzing', 'generating', 'done'];
+    let i = 0;
+    const tick = () => {
+      if (i >= order.length) return;
+      const nextStage = order[i++];
+      setSubmission(s => s && s.id === sub.id ? { ...s, stage: nextStage } : s);
+      if (nextStage === 'done') {
+        setHistory(h => [{ ...sub, stage: 'done', durationSec: Math.floor((Date.now() - sub.startedAt)/1000) }, ...h]);
+        showToast('Refaturamento concluído. Excel pronto para download.');
+        return;
+      }
+      setTimeout(tick, 1800 + Math.random() * 1600);
+    };
+    setTimeout(tick, 1200);
+  };
+
+  const handleDownload = (item) => {
+    showToast(`Baixando refaturamento_${item.protocol}.xlsx`);
+  };
+
+  const tabs = [
+    { id: 'upload',   label: 'Novo envio' },
+    { id: 'tracking', label: 'Acompanhamento', badge: submission && submission.stage !== 'done' && submission.stage !== 'error' },
+    { id: 'history',  label: 'Histórico' },
+  ];
+
+  return (
+    <div data-screen-label={`App / ${view}`}>
+      {/* HEADER */}
+      <header className="app-header" style={{ padding: '0 32px' }}>
+        <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, paddingTop: 18, paddingBottom: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+            <CnpLogo size={36}/>
+            <div style={{ width: 1, height: 32, background: '#E3E0E2' }}/>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#7F9398', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                Operações · Funeral
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#002364', marginTop: 2 }}>
+                Refaturamento de casos
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#7F9398' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#00B4AA' }}/>
+              n8n conectado
+            </div>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%', background: 'var(--grad-navy)',
+              color: 'white', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700,
+            }}>OP</div>
+          </div>
+        </div>
+
+        <nav style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', gap: 28, marginTop: 12 }}>
+          {tabs.map(tb => (
+            <button key={tb.id} className={`tab ${view === tb.id ? 'active' : ''}`} onClick={() => setView(tb.id)}>
+              {tb.label}
+              {tb.badge && <span style={{
+                display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+                background: '#D70064', marginLeft: 6, verticalAlign: 'middle',
+                animation: 'pulseDot 1.2s ease-in-out infinite'
+              }}/>}
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      {/* MAIN */}
+      <main style={{ maxWidth: 1240, margin: '0 auto', padding: '40px 32px 80px' }}>
+        {view === 'upload' && (
+          <UploadHero t={t} onSubmit={startProcessing}/>
+        )}
+
+        {view === 'tracking' && (
+          <>
+            <PageTitle title="Acompanhamento" subtitle="Status do processamento em tempo real."/>
+            <TrackingView submission={submission} onBack={() => setView('upload')} onClear={() => setSubmission(null)} onDownload={handleDownload}/>
+          </>
+        )}
+
+        {view === 'history' && (
+          <>
+            <PageTitle title="Histórico de envios" subtitle="Todos os refaturamentos processados pela plataforma."/>
+            <HistoryView items={history} onOpen={(it) => { setSubmission(it); setView('tracking'); }} onDownload={handleDownload}/>
+          </>
+        )}
+      </main>
+
+      {/* Fio de Ariadne decorativo no rodapé */}
+      {t.showAriadne && (
+        <svg style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', height: 80, pointerEvents: 'none', zIndex: 0 }} viewBox="0 0 1400 80" preserveAspectRatio="none">
+          <path d="M 0 60 Q 200 60 240 40 T 480 40 L 700 40 Q 740 40 760 60 L 1000 60 Q 1040 60 1060 40 L 1400 40"
+                fill="none" stroke="#002364" strokeWidth="1.5" strokeLinecap="round" opacity="0.18"/>
+        </svg>
+      )}
+
+      <Toast toast={toast} onDismiss={() => setToast(null)}/>
+
+      {/* Tweaks Panel */}
+      <TweaksPanel>
+        <TweakSection label="Layout do upload">
+          <TweakRadio label="Disposição" value={t.layout} onChange={v => setTweak('layout', v)}
+            options={[
+              { value: 'split',   label: 'Lado a lado' },
+              { value: 'stacked', label: 'Empilhado' },
+            ]}/>
+        </TweakSection>
+
+        <TweakSection label="Hero da página de envio">
+          <TweakRadio label="Estilo" value={t.heroStyle} onChange={v => setTweak('heroStyle', v)}
+            options={[
+              { value: 'titlebox', label: 'Caixa' },
+              { value: 'gradient', label: 'Gradiente' },
+              { value: 'minimal',  label: 'Minimal' },
+            ]}/>
+        </TweakSection>
+
+        <TweakSection label="Detalhes">
+          <TweakToggle label="Fio de Ariadne no rodapé" value={t.showAriadne} onChange={v => setTweak('showAriadne', v)}/>
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+function PageTitle({ title, subtitle }) {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: '#002364', letterSpacing: '-0.02em' }}>
+        {title}
+      </h1>
+      {subtitle && <p style={{ margin: '6px 0 0', color: '#7F9398', fontSize: 14 }}>{subtitle}</p>}
+    </div>
+  );
+}
+
+function UploadHero({ t, onSubmit }) {
+  // 3 estilos de hero conforme tweak
+  const Hero = () => {
+    if (t.heroStyle === 'gradient') {
+      return (
+        <div style={{
+          background: 'var(--grad-navy)', color: 'white',
+          padding: '40px 36px', borderRadius: 4, marginBottom: 32,
+          position: 'relative', overflow: 'hidden',
+        }}>
+          <svg style={{ position: 'absolute', right: -20, top: -20, opacity: 0.18 }} width="280" height="280" viewBox="0 0 280 280">
+            <path d="M 20 140 Q 80 140 100 100 T 200 100 Q 240 100 240 60" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M 40 220 Q 120 220 140 180 T 260 180" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 10 }}>
+            Refaturamento · Casos Funeral
+          </div>
+          <h1 style={{ margin: 0, fontSize: 36, fontWeight: 900, letterSpacing: '-0.02em', maxWidth: 680, lineHeight: 1.1 }}>
+            Envie a planilha e os documentos.<br/>
+            <span style={{ color: '#E766A2' }}>A IA cuida do resto.</span>
+          </h1>
+          <p style={{ marginTop: 14, opacity: 0.85, fontSize: 14.5, maxWidth: 560, lineHeight: 1.5 }}>
+            O fluxo no n8n analisa cada caso, cruza com os comprovantes do ZIP e devolve uma planilha Excel com a resposta consolidada.
+          </p>
+        </div>
+      );
+    }
+
+    if (t.heroStyle === 'minimal') {
+      return (
+        <div style={{ marginBottom: 32, paddingBottom: 24, borderBottom: '1.5px solid #002364' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#D70064', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 10 }}>
+            Refaturamento · Casos Funeral
+          </div>
+          <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: '#002364', letterSpacing: '-0.02em', maxWidth: 680, lineHeight: 1.15 }}>
+            Envie a planilha e o ZIP. A IA devolve a resposta em Excel.
+          </h1>
+        </div>
+      );
+    }
+
+    // titlebox (default) — fiel ao guia: "caixa de título" sustentada pelo fio de Ariadne
+    return (
+      <div style={{ marginBottom: 36, position: 'relative', paddingTop: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#7F9398', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 14 }}>
+          Refaturamento · Casos Funeral
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, position: 'relative' }}>
+          <div className="cnp-titlebox" style={{ fontSize: 30, padding: '10px 22px' }}>
+            Envie a planilha
+          </div>
+          <div className="cnp-titlebox cnp-titlebox--pink" style={{ fontSize: 30, padding: '10px 22px' }}>
+            e o ZIP de documentos
+          </div>
+        </div>
+
+        {/* Fio de Ariadne sustentando a caixa de título */}
+        <svg style={{ position: 'absolute', left: 0, bottom: -18, width: '100%', height: 24, pointerEvents: 'none' }} viewBox="0 0 800 24" preserveAspectRatio="none">
+          <path d="M 0 12 L 380 12 Q 396 12 400 4 L 760 4 Q 776 4 780 12 L 800 12"
+                fill="none" stroke="#002364" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+
+        <p style={{ marginTop: 36, color: '#454E4F', fontSize: 14.5, maxWidth: 620, lineHeight: 1.55 }}>
+          O fluxo no n8n analisa cada caso, cruza com os comprovantes do ZIP e devolve uma planilha Excel com a resposta consolidada da IA.
+        </p>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <Hero/>
+      <UploadView onSubmit={onSubmit} layout={t.layout}/>
+
+      {/* Fluxo / passo-a-passo abaixo do upload */}
+      <div style={{ marginTop: 56 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#7F9398', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 16 }}>
+          Como funciona
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          {[
+            { n: '01', t: 'Upload',     d: 'Você envia a planilha de casos e o ZIP com os documentos.' },
+            { n: '02', t: 'Extração',   d: 'O n8n descompacta o ZIP e organiza os PDFs por caso.' },
+            { n: '03', t: 'Análise IA', d: 'A IA cruza cada caso com seus comprovantes e calcula o refaturamento.' },
+            { n: '04', t: 'Retorno',    d: 'Você baixa um Excel com a resposta consolidada e auditável.' },
+          ].map((s, i) => (
+            <div key={s.n} className="card" style={{ padding: 20, position: 'relative' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? '#D70064' : '#7F9398', letterSpacing: '0.12em', marginBottom: 10 }}>
+                {s.n}
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#002364', marginBottom: 6 }}>
+                {s.t}
+              </div>
+              <div style={{ fontSize: 13, color: '#454E4F', lineHeight: 1.5 }}>
+                {s.d}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+// Auto-print: aguarda fontes, render React e um delay extra antes de imprimir
+(async () => {
+  if (document.fonts && document.fonts.ready) {
+    await document.fonts.ready;
+  }
+  // espera React montar (próximos 2 frames)
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  await new Promise(r => setTimeout(r, 500));
+  window.print();
+})();
+</script>
+
+</body>
+</html>
