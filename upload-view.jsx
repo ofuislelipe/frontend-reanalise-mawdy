@@ -1,13 +1,9 @@
 // Tela de UPLOAD — recebe 1 Excel + 1 ZIP. Drag & drop, validação,
-// botão de envio que dispara POST FormData para webhook n8n.
+// botão de envio, e integração via Webhook com o n8n.
 
 const ACCEPT_EXCEL = ['.xlsx', '.xls', '.csv'];
 const ACCEPT_ZIP   = ['.zip'];
 const MAX_MB = 200;
-
-// URL do webhook n8n. Substitua pela URL real exposta pelo seu workflow.
-// Em produção, considere usar variável de ambiente / config global.
-const N8N_WEBHOOK_URL = 'https://opexia.cnpseguradora.com.br/webhook/refaturamento-funeral';
 
 function formatBytes(b) {
   if (b < 1024) return `${b} B`;
@@ -134,115 +130,54 @@ function FileSlot({ kind, file, onPick, onClear, accept, hint, layout }) {
   );
 }
 
-// Componente simples de alerta. Empilha no canto superior direito.
-function AlertBanner({ kind, message, onClose }) {
-  const bg = kind === 'success' ? '#E6F4F3' : '#FBEAEA';
-  const fg = kind === 'success' ? '#00615B' : '#A3004C';
-  const border = kind === 'success' ? '#00615B' : '#A3004C';
-  return (
-    <div style={{
-      position: 'fixed', top: 20, right: 20, zIndex: 9999,
-      background: bg, color: fg, border: `1.5px solid ${border}`,
-      padding: '14px 18px', borderRadius: 4, maxWidth: 420,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-      display: 'flex', alignItems: 'center', gap: 12,
-      fontSize: 14, fontWeight: 600
-    }}>
-      <span style={{ flex: 1 }}>{message}</span>
-      <button onClick={onClose} style={{
-        background: 'transparent', border: 'none', cursor: 'pointer',
-        color: fg, padding: 4, display: 'grid', placeItems: 'center'
-      }}>
-        <Icon.close width="16" height="16"/>
-      </button>
-    </div>
-  );
-}
-
 function UploadView({ onSubmit, layout = 'split' }) {
   const [excel, setExcel] = React.useState(null);
   const [zip, setZip] = React.useState(null);
-  const [competencia, setCompetencia] = React.useState('');
-  const [observacoes, setObservacoes] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
-  const [alert, setAlert] = React.useState(null); // { kind: 'success' | 'error', message: string }
 
-  // Validação do formato AAAA-MM da competência
-  const competenciaValida = /^\d{4}-(0[1-9]|1[0-2])$/.test(competencia);
-  const ready = excel && zip && competenciaValida && !submitting;
+  const ready = excel && zip && !submitting;
 
-  const showAlert = (kind, message) => {
-    setAlert({ kind, message });
-    // Auto-fechar sucesso após 6s; erro fica até o usuário fechar
-    if (kind === 'success') {
-      setTimeout(() => setAlert(null), 6000);
-    }
-  };
+  // ==== CONFIGURAÇÃO DO WEBHOOK AQUI ====
+  const WEBHOOK_URL = "https://opexia.cnpseguradora.com.br/webhook-test/iniciar-reanalise"; 
 
   const handleSubmit = async () => {
     if (!ready) return;
     setSubmitting(true);
-    setAlert(null);
+
+    // Montando o pacote de dados exatamente como o n8n espera
+    const formData = new FormData();
+    formData.append("Planilha xlsx", excel);
+    formData.append("ZIP de sinistros", zip);
 
     try {
-      // Monta FormData com os nomes EXATOS dos fieldLabel configurados no
-      // Form Trigger do workflow REQUIEM v4 no n8n.
-      const formData = new FormData();
-      formData.append('Planilha xlsx', excel);
-      formData.append('ZIP de sinistros', zip);
-      formData.append('Competência (AAAA-MM)', competencia);
-      formData.append('Observações (opcional)', observacoes);
-
-      const response = await fetch(N8N_WEBHOOK_URL, {
+      const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
-        body: formData,
-        // NÃO setar Content-Type manualmente. O browser configura o
-        // multipart/form-data com boundary automaticamente.
+        body: formData
       });
 
-      if (!response.ok) {
-        // Tenta ler corpo de erro pra exibir motivo se houver
-        let detalheErro = '';
-        try {
-          const data = await response.json();
-          detalheErro = data.message || data.error || '';
-        } catch (_) {
-          detalheErro = await response.text().catch(() => '');
-        }
-        throw new Error(
-          `Erro ${response.status}: ${response.statusText}` +
-          (detalheErro ? ` — ${detalheErro}` : '')
-        );
+      if (response.ok) {
+        alert("✅ Sucesso! Os arquivos foram enviados e a reanálise começou no servidor.");
+        
+        // Limpa os campos da tela
+        setExcel(null); 
+        setZip(null);
+        
+        // Avisa o componente pai (se existir) que terminou
+        if (onSubmit) onSubmit({ success: true });
+        
+      } else {
+        alert(`❌ Erro no servidor: O n8n retornou o status ${response.status}. Verifique os logs do workflow.`);
       }
-
-      // Sucesso. Tenta extrair protocolo do response se houver
-      let protocolo = '';
-      try {
-        const data = await response.json();
-        protocolo = data.protocolo || data.execution_id || '';
-      } catch (_) { /* response pode ser vazio, tudo bem */ }
-
-      const msg = protocolo
-        ? `Envio recebido com sucesso! Protocolo: ${protocolo}`
-        : 'Envio recebido com sucesso. Você será notificado ao final do processamento.';
-      showAlert('success', msg);
-
-      // Notifica componente pai (mantém comportamento original)
-      onSubmit?.({ excel, zip, competencia, observacoes, protocolo });
-
-      // Limpa formulário
-      setExcel(null);
-      setZip(null);
-      setCompetencia('');
-      setObservacoes('');
-    } catch (err) {
-      console.error('Falha no envio para o webhook n8n:', err);
-      showAlert('error', `Falha no envio: ${err.message}`);
+    } catch (error) {
+      console.error("Erro de conexão:", error);
+      alert("⚠️ Erro de conexão! O site não conseguiu falar com o n8n. Verifique se o CORS está ativado no nó de Webhook.");
     } finally {
+      // Libera o botão novamente
       setSubmitting(false);
     }
   };
 
+  // Layouts: split (lado a lado), stacked (vertical), single (cards inline com hero)
   const slotsClass = layout === 'stacked' ? 'slots-stacked' : 'slots-split';
 
   return (
@@ -251,25 +186,9 @@ function UploadView({ onSubmit, layout = 'split' }) {
         .slots-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .slots-stacked { display: grid; grid-template-columns: 1fr; gap: 16px; }
         @media (max-width: 760px) { .slots-split { grid-template-columns: 1fr; } }
-        .field-row { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-top: 16px; }
-        @media (max-width: 760px) { .field-row { grid-template-columns: 1fr; } }
-        .input-cnp {
-          width: 100%; padding: 10px 12px; font-size: 14px;
-          border: 1px solid #E3E0E2; border-radius: 4px;
-          font-family: inherit; color: #002364; background: white;
-        }
-        .input-cnp:focus { outline: none; border-color: #002364; }
-        .input-cnp.invalid { border-color: #A3004C; }
-        .field-label {
-          display: block; font-size: 13px; font-weight: 600;
-          color: #002364; margin-bottom: 6px;
-        }
-        .field-hint { font-size: 11px; color: #7F9398; margin-top: 4px; }
       `}</style>
 
-      {alert && <AlertBanner kind={alert.kind} message={alert.message} onClose={() => setAlert(null)}/>}
-
-      <div className={slotsClass} style={{ marginBottom: 20 }}>
+      <div className={slotsClass} style={{ marginBottom: 28 }}>
         <FileSlot
           kind="excel"
           file={excel}
@@ -290,31 +209,6 @@ function UploadView({ onSubmit, layout = 'split' }) {
         />
       </div>
 
-      <div className="field-row">
-        <div>
-          <label className="field-label">Competência</label>
-          <input
-            type="text"
-            className={`input-cnp ${competencia && !competenciaValida ? 'invalid' : ''}`}
-            placeholder="2026-03"
-            value={competencia}
-            onChange={(e) => setCompetencia(e.target.value.trim())}
-            maxLength={7}
-          />
-          <div className="field-hint">Formato: AAAA-MM</div>
-        </div>
-        <div>
-          <label className="field-label">Observações (opcional)</label>
-          <input
-            type="text"
-            className="input-cnp"
-            placeholder="Ex: lote referente a sinistros pendentes"
-            value={observacoes}
-            onChange={(e) => setObservacoes(e.target.value)}
-          />
-        </div>
-      </div>
-
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         gap: 16, flexWrap: 'wrap',
@@ -322,7 +216,6 @@ function UploadView({ onSubmit, layout = 'split' }) {
         background: 'white',
         borderTop: '1px solid #E3E0E2',
         borderRadius: 4,
-        marginTop: 24
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#454E4F', fontSize: 13 }}>
           <Icon.alert width="16" height="16" stroke="#7F9398"/>
@@ -330,8 +223,7 @@ function UploadView({ onSubmit, layout = 'split' }) {
             {!excel && !zip && 'Adicione a planilha e o ZIP para continuar'}
             {excel && !zip && 'Falta o arquivo .zip com os documentos'}
             {!excel && zip && 'Falta a planilha com os casos'}
-            {excel && zip && !competenciaValida && 'Informe a competência no formato AAAA-MM'}
-            {excel && zip && competenciaValida && (
+            {excel && zip && (
               <span style={{ color: '#00615B', fontWeight: 600 }}>
                 Pronto · {formatBytes(excel.size + zip.size)} no total
               </span>
