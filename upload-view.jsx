@@ -138,7 +138,7 @@ function UploadView({ onSubmit, layout = 'split' }) {
   const ready = excel && zip && !submitting;
 
   // ==== CONFIGURAÇÃO DO WEBHOOK AQUI ====
-  const WEBHOOK_URL = "https://opexia.cnpseguradora.com.br/webhook-test/iniciar-reanalise"; 
+  const WEBHOOK_URL = "https://opexia.cnpseguradora.com.br/webhook/iniciar-reanalise"; 
 
   const handleSubmit = async () => {
     if (!ready) return;
